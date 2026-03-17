@@ -1197,53 +1197,15 @@ def _serialize_orders_list(orders_list: PortfolioOrdersList) -> dict[str, Any]:
 
 
 def _serialize_cancelled_order(result: CancelledOrder) -> dict[str, Any]:
-    return {
-        "order": _serialize_order(result.order),
-        "reduced_by": result.reduced_by,
-        "reduced_by_fp": result.reduced_by_fp,
-    }
+    payload: dict[str, Any] = {"order": _serialize_order(result.order)}
+    _maybe(payload, "reduced_by", result.reduced_by)
+    _maybe(payload, "reduced_by_fp", result.reduced_by_fp)
+    return payload
 
 
 def _serialize_order(order: PortfolioOrder) -> dict[str, Any]:
-    payload: dict[str, Any] = {
-        "order_id": order.order_id,
-        "user_id": order.user_id,
-        "client_order_id": order.client_order_id,
-        "ticker": order.ticker,
-        "status": order.status,
-        "side": order.side,
-        "action": order.action,
-        "type": order.type,
-        "yes_price": order.yes_price,
-        "no_price": order.no_price,
-        "fill_count": order.fill_count,
-        "remaining_count": order.remaining_count,
-        "initial_count": order.initial_count,
-        "taker_fees": order.taker_fees,
-        "maker_fees": order.maker_fees,
-        "taker_fill_cost": order.taker_fill_cost,
-        "maker_fill_cost": order.maker_fill_cost,
-        "queue_position": order.queue_position,
-        "yes_price_dollars": order.yes_price_dollars,
-        "no_price_dollars": order.no_price_dollars,
-        "fill_count_fp": order.fill_count_fp,
-        "remaining_count_fp": order.remaining_count_fp,
-        "initial_count_fp": order.initial_count_fp,
-        "taker_fill_cost_dollars": order.taker_fill_cost_dollars,
-        "maker_fill_cost_dollars": order.maker_fill_cost_dollars,
-    }
-
-    _maybe(payload, "taker_fees_dollars", order.taker_fees_dollars)
-    _maybe(payload, "maker_fees_dollars", order.maker_fees_dollars)
-    _maybe(payload, "expiration_time", order.expiration_time)
-    _maybe(payload, "created_time", order.created_time)
-    _maybe(payload, "last_update_time", order.last_update_time)
-    _maybe(payload, "self_trade_prevention_type", order.self_trade_prevention_type)
-    _maybe(payload, "order_group_id", order.order_group_id)
-    _maybe(payload, "cancel_order_on_pause", order.cancel_order_on_pause)
-    _maybe(payload, "subaccount_number", order.subaccount_number)
-
-    return payload
+    import dataclasses
+    return {k: v for k, v in dataclasses.asdict(order).items() if v is not None}
 
 
 def handle_get_positions(
@@ -1328,40 +1290,13 @@ def _serialize_positions(positions: PortfolioPositions) -> dict[str, Any]:
 
 
 def _serialize_market_position(pos: MarketPosition) -> dict[str, Any]:
-    payload: dict[str, Any] = {
-        "ticker": pos.ticker,
-        "total_traded": pos.total_traded,
-        "total_traded_dollars": pos.total_traded_dollars,
-        "position": pos.position,
-        "position_fp": pos.position_fp,
-        "market_exposure": pos.market_exposure,
-        "market_exposure_dollars": pos.market_exposure_dollars,
-        "realized_pnl": pos.realized_pnl,
-        "realized_pnl_dollars": pos.realized_pnl_dollars,
-        "resting_orders_count": pos.resting_orders_count,
-        "fees_paid": pos.fees_paid,
-        "fees_paid_dollars": pos.fees_paid_dollars,
-    }
-    _maybe(payload, "last_updated_ts", pos.last_updated_ts)
-    return payload
+    import dataclasses
+    return {k: v for k, v in dataclasses.asdict(pos).items() if v is not None}
 
 
 def _serialize_event_position(pos: EventPosition) -> dict[str, Any]:
-    payload: dict[str, Any] = {
-        "event_ticker": pos.event_ticker,
-        "total_cost": pos.total_cost,
-        "total_cost_dollars": pos.total_cost_dollars,
-        "total_cost_shares": pos.total_cost_shares,
-        "total_cost_shares_fp": pos.total_cost_shares_fp,
-        "event_exposure": pos.event_exposure,
-        "event_exposure_dollars": pos.event_exposure_dollars,
-        "realized_pnl": pos.realized_pnl,
-        "realized_pnl_dollars": pos.realized_pnl_dollars,
-        "fees_paid": pos.fees_paid,
-        "fees_paid_dollars": pos.fees_paid_dollars,
-    }
-    _maybe(payload, "resting_orders_count", pos.resting_orders_count)
-    return payload
+    import dataclasses
+    return {k: v for k, v in dataclasses.asdict(pos).items() if v is not None}
 
 
 def _maybe(payload: dict[str, Any], key: str, value: Any) -> None:

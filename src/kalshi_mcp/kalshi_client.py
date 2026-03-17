@@ -329,20 +329,13 @@ class KalshiClient:
                 f"DELETE /portfolio/orders/{order_id}: unable to parse order from response."
             )
 
-        endpoint = f"/portfolio/orders/{order_id}"
-        reduced_by = self._require_int_field(payload, "reduced_by", endpoint=endpoint)
-
+        reduced_by = payload.get("reduced_by")
+        if reduced_by is not None and not isinstance(reduced_by, int):
+            reduced_by = None
+            
         reduced_by_fp = payload.get("reduced_by_fp")
-        if not isinstance(reduced_by_fp, str):
-            LOGGER.error(
-                "Unexpected %s payload: expected string at 'reduced_by_fp', got=%s keys=%s",
-                endpoint,
-                self._describe_value(reduced_by_fp),
-                sorted(payload.keys()),
-            )
-            raise KalshiClientError(
-                f"Unexpected response shape from Kalshi API: missing string 'reduced_by_fp'."
-            )
+        if reduced_by_fp is not None and not isinstance(reduced_by_fp, str):
+            reduced_by_fp = None
 
         return CancelledOrder(order=order, reduced_by=reduced_by, reduced_by_fp=reduced_by_fp)
 
@@ -442,61 +435,20 @@ class KalshiClient:
             )
             return None
 
-        required_string_fields = (
-            "ticker",
-            "total_traded_dollars",
-            "position_fp",
-            "market_exposure_dollars",
-            "realized_pnl_dollars",
-            "fees_paid_dollars",
-        )
-        string_values: dict[str, str] = {}
-        for field_name in required_string_fields:
-            value = raw.get(field_name)
-            if not isinstance(value, str):
-                LOGGER.warning(
-                    "Skipping market_positions[%s]: expected '%s' as string, got %s",
-                    index, field_name, self._describe_value(value),
-                )
-                return None
-            string_values[field_name] = value
-
-        required_int_fields = ("total_traded", "position", "market_exposure",
-                               "realized_pnl", "resting_orders_count", "fees_paid")
-        int_values: dict[str, int] = {}
-        for field_name in required_int_fields:
-            value = raw.get(field_name)
-            if isinstance(value, bool) or not isinstance(value, int):
-                LOGGER.warning(
-                    "Skipping market_positions[%s]: expected '%s' as int, got %s",
-                    index, field_name, self._describe_value(value),
-                )
-                return None
-            int_values[field_name] = value
-
-        last_updated_ts = raw.get("last_updated_ts")
-        if last_updated_ts is not None and not isinstance(last_updated_ts, str):
-            LOGGER.warning(
-                "Ignoring market_positions[%s].last_updated_ts with unexpected type %s",
-                index,
-                self._describe_value(last_updated_ts),
-            )
-            last_updated_ts = None
-
         return MarketPosition(
-            ticker=string_values["ticker"],
-            total_traded=int_values["total_traded"],
-            total_traded_dollars=string_values["total_traded_dollars"],
-            position=int_values["position"],
-            position_fp=string_values["position_fp"],
-            market_exposure=int_values["market_exposure"],
-            market_exposure_dollars=string_values["market_exposure_dollars"],
-            realized_pnl=int_values["realized_pnl"],
-            realized_pnl_dollars=string_values["realized_pnl_dollars"],
-            resting_orders_count=int_values["resting_orders_count"],
-            fees_paid=int_values["fees_paid"],
-            fees_paid_dollars=string_values["fees_paid_dollars"],
-            last_updated_ts=last_updated_ts,
+            ticker=self._optional_order_str(raw, "ticker", index),
+            total_traded=self._optional_order_int(raw, "total_traded", index),
+            total_traded_dollars=self._optional_order_str(raw, "total_traded_dollars", index),
+            position=self._optional_order_int(raw, "position", index),
+            position_fp=self._optional_order_str(raw, "position_fp", index),
+            market_exposure=self._optional_order_int(raw, "market_exposure", index),
+            market_exposure_dollars=self._optional_order_str(raw, "market_exposure_dollars", index),
+            realized_pnl=self._optional_order_int(raw, "realized_pnl", index),
+            realized_pnl_dollars=self._optional_order_str(raw, "realized_pnl_dollars", index),
+            resting_orders_count=self._optional_order_int(raw, "resting_orders_count", index),
+            fees_paid=self._optional_order_int(raw, "fees_paid", index),
+            fees_paid_dollars=self._optional_order_str(raw, "fees_paid_dollars", index),
+            last_updated_ts=self._optional_order_str(raw, "last_updated_ts", index),
         )
 
     def _parse_event_position(self, raw: Any, index: int) -> EventPosition | None:
@@ -508,56 +460,19 @@ class KalshiClient:
             )
             return None
 
-        required_string_fields = ("event_ticker", "total_cost_dollars", "total_cost_shares_fp",
-                                  "event_exposure_dollars", "realized_pnl_dollars",
-                                  "fees_paid_dollars")
-        string_values: dict[str, str] = {}
-        for field_name in required_string_fields:
-            value = raw.get(field_name)
-            if not isinstance(value, str):
-                LOGGER.warning(
-                    "Skipping event_positions[%s]: expected '%s' as string, got %s",
-                    index, field_name, self._describe_value(value),
-                )
-                return None
-            string_values[field_name] = value
-
-        required_int_fields = ("total_cost", "total_cost_shares", "event_exposure",
-                               "realized_pnl", "fees_paid")
-        int_values: dict[str, int] = {}
-        for field_name in required_int_fields:
-            value = raw.get(field_name)
-            if isinstance(value, bool) or not isinstance(value, int):
-                LOGGER.warning(
-                    "Skipping event_positions[%s]: expected '%s' as int, got %s",
-                    index, field_name, self._describe_value(value),
-                )
-                return None
-            int_values[field_name] = value
-
-        resting_orders_count = raw.get("resting_orders_count")
-        if resting_orders_count is not None:
-            if isinstance(resting_orders_count, bool) or not isinstance(resting_orders_count, int):
-                LOGGER.warning(
-                    "Ignoring event_positions[%s].resting_orders_count with unexpected type %s",
-                    index,
-                    self._describe_value(resting_orders_count),
-                )
-                resting_orders_count = None
-
         return EventPosition(
-            event_ticker=string_values["event_ticker"],
-            total_cost=int_values["total_cost"],
-            total_cost_dollars=string_values["total_cost_dollars"],
-            total_cost_shares=int_values["total_cost_shares"],
-            total_cost_shares_fp=string_values["total_cost_shares_fp"],
-            event_exposure=int_values["event_exposure"],
-            event_exposure_dollars=string_values["event_exposure_dollars"],
-            realized_pnl=int_values["realized_pnl"],
-            realized_pnl_dollars=string_values["realized_pnl_dollars"],
-            fees_paid=int_values["fees_paid"],
-            fees_paid_dollars=string_values["fees_paid_dollars"],
-            resting_orders_count=resting_orders_count,
+            event_ticker=self._optional_order_str(raw, "event_ticker", index),
+            total_cost=self._optional_order_int(raw, "total_cost", index),
+            total_cost_dollars=self._optional_order_str(raw, "total_cost_dollars", index),
+            total_cost_shares=self._optional_order_int(raw, "total_cost_shares", index),
+            total_cost_shares_fp=self._optional_order_str(raw, "total_cost_shares_fp", index),
+            event_exposure=self._optional_order_int(raw, "event_exposure", index),
+            event_exposure_dollars=self._optional_order_str(raw, "event_exposure_dollars", index),
+            realized_pnl=self._optional_order_int(raw, "realized_pnl", index),
+            realized_pnl_dollars=self._optional_order_str(raw, "realized_pnl_dollars", index),
+            fees_paid=self._optional_order_int(raw, "fees_paid", index),
+            fees_paid_dollars=self._optional_order_str(raw, "fees_paid_dollars", index),
+            resting_orders_count=self._optional_order_int(raw, "resting_orders_count", index),
         )
 
     def _parse_order(self, raw_order: Any, index: int) -> PortfolioOrder | None:
@@ -569,130 +484,41 @@ class KalshiClient:
             )
             return None
 
-        required_string_fields = (
-            "order_id",
-            "user_id",
-            "client_order_id",
-            "ticker",
-            "status",
-            "side",
-            "action",
-            "type",
-        )
-        string_values: dict[str, str] = {}
-        for field_name in required_string_fields:
-            value = raw_order.get(field_name)
-            if not isinstance(value, str):
-                LOGGER.warning(
-                    "Skipping orders[%s]: expected '%s' as string, got %s",
-                    index,
-                    field_name,
-                    self._describe_value(value),
-                )
-                return None
-            string_values[field_name] = value
-
-        required_int_fields = (
-            "yes_price",
-            "no_price",
-            "fill_count",
-            "remaining_count",
-            "initial_count",
-            "taker_fees",
-            "maker_fees",
-            "taker_fill_cost",
-            "maker_fill_cost",
-            "queue_position",
-        )
-        int_values: dict[str, int] = {}
-        for field_name in required_int_fields:
-            value = raw_order.get(field_name)
-            if isinstance(value, bool) or not isinstance(value, int):
-                LOGGER.warning(
-                    "Skipping orders[%s]: expected '%s' as int, got %s",
-                    index,
-                    field_name,
-                    self._describe_value(value),
-                )
-                return None
-            int_values[field_name] = value
-
-        required_dollar_fields = (
-            "yes_price_dollars",
-            "no_price_dollars",
-            "fill_count_fp",
-            "remaining_count_fp",
-            "initial_count_fp",
-            "taker_fill_cost_dollars",
-            "maker_fill_cost_dollars",
-        )
-        dollar_values: dict[str, str] = {}
-        for field_name in required_dollar_fields:
-            value = raw_order.get(field_name)
-            if not isinstance(value, str):
-                LOGGER.warning(
-                    "Skipping orders[%s]: expected '%s' as string, got %s",
-                    index,
-                    field_name,
-                    self._describe_value(value),
-                )
-                return None
-            dollar_values[field_name] = value
-
-        # Optional string fields
-        opt_taker_fees_dollars = self._optional_order_str(raw_order, "taker_fees_dollars", index)
-        opt_maker_fees_dollars = self._optional_order_str(raw_order, "maker_fees_dollars", index)
-        opt_expiration_time = self._optional_order_str(raw_order, "expiration_time", index)
-        opt_created_time = self._optional_order_str(raw_order, "created_time", index)
-        opt_last_update_time = self._optional_order_str(raw_order, "last_update_time", index)
-        opt_self_trade_prevention_type = self._optional_order_str(
-            raw_order, "self_trade_prevention_type", index
-        )
-        opt_order_group_id = self._optional_order_str(raw_order, "order_group_id", index)
-
-        # Optional bool field
-        opt_cancel_order_on_pause = self._optional_order_bool(
-            raw_order, "cancel_order_on_pause", index
-        )
-
-        # Optional int field
-        opt_subaccount_number = self._optional_order_int(raw_order, "subaccount_number", index)
-
         return PortfolioOrder(
-            order_id=string_values["order_id"],
-            user_id=string_values["user_id"],
-            client_order_id=string_values["client_order_id"],
-            ticker=string_values["ticker"],
-            status=string_values["status"],
-            side=string_values["side"],
-            action=string_values["action"],
-            type=string_values["type"],
-            yes_price=int_values["yes_price"],
-            no_price=int_values["no_price"],
-            fill_count=int_values["fill_count"],
-            remaining_count=int_values["remaining_count"],
-            initial_count=int_values["initial_count"],
-            taker_fees=int_values["taker_fees"],
-            maker_fees=int_values["maker_fees"],
-            taker_fill_cost=int_values["taker_fill_cost"],
-            maker_fill_cost=int_values["maker_fill_cost"],
-            queue_position=int_values["queue_position"],
-            yes_price_dollars=dollar_values["yes_price_dollars"],
-            no_price_dollars=dollar_values["no_price_dollars"],
-            fill_count_fp=dollar_values["fill_count_fp"],
-            remaining_count_fp=dollar_values["remaining_count_fp"],
-            initial_count_fp=dollar_values["initial_count_fp"],
-            taker_fill_cost_dollars=dollar_values["taker_fill_cost_dollars"],
-            maker_fill_cost_dollars=dollar_values["maker_fill_cost_dollars"],
-            taker_fees_dollars=opt_taker_fees_dollars,
-            maker_fees_dollars=opt_maker_fees_dollars,
-            expiration_time=opt_expiration_time,
-            created_time=opt_created_time,
-            last_update_time=opt_last_update_time,
-            self_trade_prevention_type=opt_self_trade_prevention_type,
-            order_group_id=opt_order_group_id,
-            cancel_order_on_pause=opt_cancel_order_on_pause,
-            subaccount_number=opt_subaccount_number,
+            order_id=self._optional_order_str(raw_order, "order_id", index),
+            user_id=self._optional_order_str(raw_order, "user_id", index),
+            client_order_id=self._optional_order_str(raw_order, "client_order_id", index),
+            ticker=self._optional_order_str(raw_order, "ticker", index),
+            status=self._optional_order_str(raw_order, "status", index),
+            side=self._optional_order_str(raw_order, "side", index),
+            action=self._optional_order_str(raw_order, "action", index),
+            type=self._optional_order_str(raw_order, "type", index),
+            yes_price=self._optional_order_int(raw_order, "yes_price", index),
+            no_price=self._optional_order_int(raw_order, "no_price", index),
+            fill_count=self._optional_order_int(raw_order, "fill_count", index),
+            remaining_count=self._optional_order_int(raw_order, "remaining_count", index),
+            initial_count=self._optional_order_int(raw_order, "initial_count", index),
+            taker_fees=self._optional_order_int(raw_order, "taker_fees", index),
+            maker_fees=self._optional_order_int(raw_order, "maker_fees", index),
+            taker_fill_cost=self._optional_order_int(raw_order, "taker_fill_cost", index),
+            maker_fill_cost=self._optional_order_int(raw_order, "maker_fill_cost", index),
+            queue_position=self._optional_order_int(raw_order, "queue_position", index),
+            yes_price_dollars=self._optional_order_str(raw_order, "yes_price_dollars", index),
+            no_price_dollars=self._optional_order_str(raw_order, "no_price_dollars", index),
+            fill_count_fp=self._optional_order_str(raw_order, "fill_count_fp", index),
+            remaining_count_fp=self._optional_order_str(raw_order, "remaining_count_fp", index),
+            initial_count_fp=self._optional_order_str(raw_order, "initial_count_fp", index),
+            taker_fill_cost_dollars=self._optional_order_str(raw_order, "taker_fill_cost_dollars", index),
+            maker_fill_cost_dollars=self._optional_order_str(raw_order, "maker_fill_cost_dollars", index),
+            taker_fees_dollars=self._optional_order_str(raw_order, "taker_fees_dollars", index),
+            maker_fees_dollars=self._optional_order_str(raw_order, "maker_fees_dollars", index),
+            expiration_time=self._optional_order_str(raw_order, "expiration_time", index),
+            created_time=self._optional_order_str(raw_order, "created_time", index),
+            last_update_time=self._optional_order_str(raw_order, "last_update_time", index),
+            self_trade_prevention_type=self._optional_order_str(raw_order, "self_trade_prevention_type", index),
+            order_group_id=self._optional_order_str(raw_order, "order_group_id", index),
+            cancel_order_on_pause=self._optional_order_bool(raw_order, "cancel_order_on_pause", index),
+            subaccount_number=self._optional_order_int(raw_order, "subaccount_number", index),
         )
 
     def _optional_order_str(self, raw: dict[str, Any], key: str, index: int) -> str | None:

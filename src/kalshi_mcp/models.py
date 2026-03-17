@@ -119,36 +119,34 @@ class Order:
 
 @dataclass
 class PortfolioOrder:
-    # Required string fields
-    order_id: str
-    user_id: str
-    client_order_id: str
-    ticker: str
-    status: str
-    side: str
-    action: str
-    type: str
+    # All fields made optional to support flexible Kalshi API responses
+    order_id: str | None = None
+    user_id: str | None = None
+    client_order_id: str | None = None
+    ticker: str | None = None
+    status: str | None = None
+    side: str | None = None
+    action: str | None = None
+    type: str | None = None
 
-    # Required int fields
-    yes_price: int
-    no_price: int
-    fill_count: int
-    remaining_count: int
-    initial_count: int
-    taker_fees: int
-    maker_fees: int
-    taker_fill_cost: int
-    maker_fill_cost: int
-    queue_position: int
+    yes_price: int | None = None
+    no_price: int | None = None
+    fill_count: int | None = None
+    remaining_count: int | None = None
+    initial_count: int | None = None
+    taker_fees: int | None = None
+    maker_fees: int | None = None
+    taker_fill_cost: int | None = None
+    maker_fill_cost: int | None = None
+    queue_position: int | None = None
 
-    # Required string (dollar) fields
-    yes_price_dollars: str
-    no_price_dollars: str
-    fill_count_fp: str
-    remaining_count_fp: str
-    initial_count_fp: str
-    taker_fill_cost_dollars: str
-    maker_fill_cost_dollars: str
+    yes_price_dollars: str | None = None
+    no_price_dollars: str | None = None
+    fill_count_fp: str | None = None
+    remaining_count_fp: str | None = None
+    initial_count_fp: str | None = None
+    taker_fill_cost_dollars: str | None = None
+    maker_fill_cost_dollars: str | None = None
 
     # Optional string fields
     taker_fees_dollars: str | None = None
@@ -258,8 +256,8 @@ class Series:
 class CancelledOrder:
     """Result of cancelling an order via DELETE /portfolio/orders/{order_id}."""
     order: PortfolioOrder
-    reduced_by: int
-    reduced_by_fp: str
+    reduced_by: int | None = None
+    reduced_by_fp: str | None = None
 
 
 @dataclass
@@ -271,35 +269,35 @@ class SeriesList:
 @dataclass(frozen=True, slots=True)
 class MarketPosition:
     """A single market-level position from GET /portfolio/positions."""
-    ticker: str
-    total_traded: int
-    total_traded_dollars: str
-    position: int
-    position_fp: str
-    market_exposure: int
-    market_exposure_dollars: str
-    realized_pnl: int
-    realized_pnl_dollars: str
-    resting_orders_count: int
-    fees_paid: int
-    fees_paid_dollars: str
+    ticker: str | None = None
+    total_traded: int | None = None
+    total_traded_dollars: str | None = None
+    position: int | None = None
+    position_fp: str | None = None
+    market_exposure: int | None = None
+    market_exposure_dollars: str | None = None
+    realized_pnl: int | None = None
+    realized_pnl_dollars: str | None = None
+    resting_orders_count: int | None = None
+    fees_paid: int | None = None
+    fees_paid_dollars: str | None = None
     last_updated_ts: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
 class EventPosition:
     """A single event-level position from GET /portfolio/positions."""
-    event_ticker: str
-    total_cost: int
-    total_cost_dollars: str
-    total_cost_shares: int
-    total_cost_shares_fp: str
-    event_exposure: int
-    event_exposure_dollars: str
-    realized_pnl: int
-    realized_pnl_dollars: str
-    fees_paid: int
-    fees_paid_dollars: str
+    event_ticker: str | None = None
+    total_cost: int | None = None
+    total_cost_dollars: str | None = None
+    total_cost_shares: int | None = None
+    total_cost_shares_fp: str | None = None
+    event_exposure: int | None = None
+    event_exposure_dollars: str | None = None
+    realized_pnl: int | None = None
+    realized_pnl_dollars: str | None = None
+    fees_paid: int | None = None
+    fees_paid_dollars: str | None = None
     resting_orders_count: int | None = None
 
 
