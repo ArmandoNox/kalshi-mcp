@@ -109,10 +109,27 @@ def _parse_optional_int(
 
 
 def _parse_bool(arguments: dict[str, Any], key: str, default: bool, *, type_error: str) -> bool:
-    value = arguments.get(key, default)
-    if not isinstance(value, bool):
-        raise ValueError(type_error)
-    return value
+    value = arguments.get(key)
+    if value is None:
+        return default
+        
+    if isinstance(value, bool):
+        return value
+        
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"true", "1", "yes", "y"}:
+            return True
+        if normalized in {"false", "0", "no", "n"}:
+            return False
+            
+    if isinstance(value, int):
+        if value == 1:
+            return True
+        if value == 0:
+            return False
+            
+    raise ValueError(type_error)
 
 
 def _parse_positions_count_filter(value: str) -> str:
