@@ -44,9 +44,16 @@ def _parse_required_str(
     empty_error: str | None = None,
 ) -> str:
     value = arguments.get(key)
-    if not isinstance(value, str):
+    if value is None:
         raise ValueError(type_error)
-    normalized = value.strip()
+        
+    try:
+        if isinstance(value, float) and value.is_integer():
+            value = int(value)
+        normalized = str(value).strip()
+    except Exception:
+        raise ValueError(type_error)
+        
     if empty_error is not None and not normalized:
         raise ValueError(empty_error)
     return normalized
@@ -62,9 +69,14 @@ def _parse_optional_str(
     value = arguments.get(key)
     if value is None:
         return None
-    if not isinstance(value, str):
+        
+    try:
+        if isinstance(value, float) and value.is_integer():
+            value = int(value)
+        normalized = str(value).strip()
+    except Exception:
         raise ValueError(type_error)
-    normalized = value.strip()
+        
     if not normalized:
         raise ValueError(empty_error)
     return normalized
@@ -82,11 +94,18 @@ def _parse_optional_int(
     value = arguments.get(key)
     if value is None:
         return None
-    if isinstance(value, bool) or not isinstance(value, int):
+        
+    if isinstance(value, bool):
         raise ValueError(type_error)
-    if value < min_value or value > max_value:
+        
+    try:
+        int_value = int(value)
+    except (ValueError, TypeError):
+        raise ValueError(type_error)
+        
+    if int_value < min_value or int_value > max_value:
         raise ValueError(range_error)
-    return value
+    return int_value
 
 
 def _parse_bool(arguments: dict[str, Any], key: str, default: bool, *, type_error: str) -> bool:
